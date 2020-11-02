@@ -1,0 +1,17 @@
+CREATE TABLE UserScores (name STRING, score INT)
+WITH (
+  'connector' = 'socket',
+  'hostname' = 'localhost',
+  'port' = '9999',
+  'byte-delimiter' = '10',
+  'format' = 'changelog-csv',
+  'changelog-csv.column-delimiter' = '|'
+);
+
+SELECT name, SUM(score) FROM UserScores GROUP BY name;
+
+> nc -lk 9999
+INSERT|Alice|12
+INSERT|Bob|5
+DELETE|Alice|12
+INSERT|Alice|18

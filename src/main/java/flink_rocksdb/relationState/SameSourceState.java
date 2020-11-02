@@ -1,0 +1,70 @@
+package flink_rocksdb.relationState;
+
+import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.functions.RichMapFunction;
+import org.apache.flink.api.common.state.MapState;
+import org.apache.flink.api.common.state.MapStateDescriptor;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.client.program.StreamContextEnvironment;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.streaming.api.datastream.DataStreamSource;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+
+public class SameSourceState {
+
+    public static void main(String[] args) throws Exception {
+
+        StreamExecutionEnvironment env = StreamContextEnvironment.getExecutionEnvironment();
+//        env.enableCheckpointing(60000);
+
+        final MapStateDescriptor<Integer, Integer> mapDesc =
+                new MapStateDescriptor<Integer, Integer>("mapdesc", Integer.class, Integer.class);
+
+        // 模拟zc_cc数据 id,number 例如1，10
+        DataStreamSource<String> source = env.socketTextStream("localhost", 9998);
+        source.map(new MapFunction<String, Tuple2<Integer, Integer>>() {
+            @Override
+            public Tuple2<Integer, Integer> map(String value) throws Exception {
+                String[] data = value.split(",");
+                return new Tuple2<>(Integer.parseInt(data[0]), Integer.parseInt(data[1]));
+            }
+        }).keyBy(0)
+        .map(new RichMapFunction<Tuple2<Integer,Integer>, Tuple2<Integer, Integer>>() {
+
+            private MapState<Integer, Integer> mapState;
+
+            @Override
+            public void open(Configuration parameters) throws Exception {
+
+                mapState = getRuntimeContext().getMapState(mapDesc);
+            }
+
+            @Override
+            public Tuple2<Integer, Integer> map(Tuple2<Integer, Integer> value) throws Exception {
+                Integer updatedValue = value.f1;
+                if(mapState.contains(value.f0)){
+                    updatedValue += mapState.get(value.f0);
+                }
+                mapState.put(value.f0, updatedValue);
+                return new Tuple2<>(value.f0, updatedValue);
+            }
+        }).keyBy(0).map(new RichMapFunction<Tuple2<Integer,Integer>, Tuple2<Integer,Integer>>() {
+
+            private MapState<Integer, Integer> mapState;
+
+            @Override
+            public Tuple2<Integer, Integer> map(Tuple2<Integer, Integer> value) throws Exception {
+
+                System.out.println(mapState.get(value.f0) + "******************");
+                return null;
+            }
+
+            @Override
+            public void open(Configuration parameters) throws Exception {
+                mapState = getRuntimeContext().getMapState(mapDesc);
+            }
+        });
+
+        env.execute("run job");
+    }
+}
