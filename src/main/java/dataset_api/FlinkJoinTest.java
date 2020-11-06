@@ -1,4 +1,4 @@
-package yux.dataset_api;
+package dataset_api;
 
 import org.apache.flink.api.common.functions.JoinFunction;
 import org.apache.flink.api.common.operators.base.JoinOperatorBase;
