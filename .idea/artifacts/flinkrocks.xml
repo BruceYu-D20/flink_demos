@@ -1,8 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" name="flinkrocks">
-    <output-path>$PROJECT_DIR$/out/artifacts/flink_rocks</output-path>
-    <root id="archive" name="flinkrocks.jar">
-      <element id="module-output" name="flink_test_1.11" />
-    </root>
-  </artifact>
-</component>
